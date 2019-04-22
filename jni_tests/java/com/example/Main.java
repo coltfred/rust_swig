@@ -374,6 +374,7 @@ class Main {
 
         assert !TestOptional.f4(null).isPresent();
         l = TestOptional.f4(foo);
+        assert foo.getName().equals("Some");
         assert l.isPresent();
         assert l.getAsLong() == 5;
 
