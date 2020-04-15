@@ -1,9 +1,881 @@
-use super::{f2, Foo};
+use crate::{
+    document_access_change_result::{DocumentAccessChange, FailedResult, SucceededResult},
+    document_decrypt_unmanaged_result::UserOrGroupId,
+};
 
-foreign_class!(class Foo {
-    self_type Foo;
-    constructor Foo::new(_: i32) -> Foo;
-    fn Foo::set_field(&mut self, _: i32);
-    fn Foo::f(&self, _: i32, _: i32) -> i32;
-    fn f2(_: i32) -> i32;
+#[cfg(feature = "java")]
+use crate::jni_c_header::*;
+
+#[cfg(feature = "android")]
+use jni_sys::*;
+
+///
+/// Classes for Common Types
+///
+
+foreigner_class!(
+/// Represents an asymmetric public key that wraps the underlying bytes
+/// of the key.
+class PublicKey {
+    self_type PublicKey;
+    private constructor = empty;
+    static_method public_key::validate(bytes: &[i8]) -> Result<PublicKey, String>;
+    method public_key::as_bytes(&self) -> Vec<i8>; alias asBytes;
+});
+
+foreigner_class!(
+/// Represents an asymmetric private key that wraps the underlying bytes
+/// of the key.
+class PrivateKey {
+    self_type PrivateKey;
+    private constructor = empty;
+    static_method private_key::validate(bytes: &[i8]) -> Result<PrivateKey, String>;
+    method private_key::as_bytes(&self) -> Vec<i8>; alias asBytes;
+});
+
+foreigner_class!(
+/// Signing keypair specific to a device. Used to sign all requests to the IronCore API
+/// endpoints. Needed to create a `DeviceContext`.
+class DeviceSigningKeyPair {
+    self_type DeviceSigningKeyPair;
+    private constructor = empty;
+    static_method device_signing_keys::validate(bytes: &[i8]) -> Result<DeviceSigningKeyPair, String>;
+    method device_signing_keys::as_bytes(&self) -> Vec<i8>; alias asBytes;
+});
+
+foreigner_class!(
+/// ID of a user. Unique with in a segment. Must match the regex `^[a-zA-Z0-9_.$#|@/:;=+'-]+$`.
+#[derive(Clone)]
+class UserId {
+    self_type UserId;
+    private constructor = empty;
+    static_method user_id::validate(s: &str) -> Result<UserId, String>;
+    method user_id::id(&self) -> String; alias getId;
+});
+
+foreigner_class!(
+/// ID of a group. Unique within a segment. Must match the regex `^[a-zA-Z0-9_.$#|@/:;=+'-]+$`
+#[derive(Clone)]
+class GroupId {
+    self_type GroupId;
+    private constructor = empty;
+    static_method group_id::validate(s: &str) -> Result<GroupId, String>;
+    method group_id::id(&self) -> String; alias getId;
+});
+
+foreigner_class!(
+/// Either a user id or a group id
+class UserOrGroupId {
+    self_type UserOrGroupId;
+    private constructor = empty;
+    method UserOrGroupId::id(&self) -> String; alias getId;
+    method UserOrGroupId::is_user(&self) -> bool; alias isUser;
+    method UserOrGroupId::is_group(&self) -> bool; alias isGroup;
+});
+
+foreigner_class!(
+/// Group's user-assigned name. (non-unique)
+class GroupName {
+    self_type GroupName;
+    private constructor = empty;
+    static_method group_name::validate(s: &str) -> Result<GroupName, String>;
+    method group_name::name(&self) -> String; alias getName;
+});
+
+foreigner_class!(
+class NullableBoolean{
+    self_type NullableBoolean;
+    private constructor = empty;
+    method NullableBoolean::boolean(&self) -> bool; alias getBoolean;
+});
+
+foreigner_class!(
+/// ID of a document. Unique within the segment. Must match the regex `^[a-zA-Z0-9_.$#|@/:;=+'-]+$`.
+class DocumentId {
+    self_type DocumentId;
+    private constructor = empty;
+    static_method document_id::validate(s: &str) -> Result<DocumentId, String>;
+    method document_id::id(&self) -> String; alias getId;
+});
+
+foreigner_class!(
+/// Document name type. Validates that the provided document name isn't an empty string
+class DocumentName {
+    self_type DocumentName;
+    private constructor = empty;
+    static_method document_name::validate(s: &str) -> Result<DocumentName, String>;
+    method document_name::name(&self) -> String; alias getName;
+});
+
+foreigner_class!(
+/// ID of a device. Device IDs are numeric and will always be greater than 0.
+class DeviceId {
+    self_type DeviceId;
+    private constructor = empty;
+    static_method device_id::validate(s: i64) -> Result<DeviceId, String>;
+    method device_id::id(&self) -> i64; alias getId;
+});
+
+foreigner_class!(
+class UserUpdatePrivateKeyResult {
+    self_type UserUpdatePrivateKeyResult;
+    private constructor = empty;
+    /// Updated encrypted user private key
+    method user_update_private_key_result::user_master_private_key(&self) -> EncryptedPrivateKey; alias getUserMasterPrivateKey;
+    /// True if this user's master key requires rotation
+    method user_update_private_key_result::needs_rotation(&self) -> bool; alias getNeedsRotation;
+});
+
+foreigner_class!(
+    class EncryptedPrivateKey {
+    self_type EncryptedPrivateKey;
+    private constructor = empty;
+    method encrypted_private_key::as_bytes(&self) -> Vec<i8>; alias asBytes;
+
+});
+
+foreigner_class!(
+/// Device name type. Validates that the provided name isn't an empty string
+class DeviceName {
+    self_type DeviceName;
+    private constructor = empty;
+    static_method device_name::validate(s: &str) -> Result<DeviceName, String>;
+    method device_name::name(&self) -> String; alias getName;
+});
+
+foreigner_class!(
+/// Represents a User struct which is returned from document get to show the IDs of users the document is visible to
+class VisibleUser {
+    self_type VisibleUser;
+    private constructor = empty;
+    method visible_user::id(&self) -> UserId; alias getId;
+});
+
+foreigner_class!(
+/// Represents a Group struct which is returned from document get to show the IDs and names of groups the document is visible to
+class VisibleGroup {
+    self_type VisibleGroup;
+    private constructor = empty;
+    method visible_group::id(&self) -> GroupId; alias getId;
+    method visible_group::name(&self) -> Option<GroupName>; alias getName;
+});
+
+foreigner_class!(
+/// A single grant/remove failure for a user.
+class UserAccessErr {
+    self_type UserAccessErr;
+    private constructor = empty;
+    method UserAccessErr::id(&self) -> UserId; alias getId;
+    method UserAccessErr::err(&self) -> String; alias getErr;
+});
+
+foreigner_class!(
+/// A single grant/remove failure for a group.
+class GroupAccessErr {
+    self_type GroupAccessErr;
+    private constructor = empty;
+    method GroupAccessErr::id(&self) -> GroupId; alias getId;
+    method GroupAccessErr::err(&self) -> String; alias getErr;
+});
+
+foreigner_class!(class UserWithKey {
+    self_type UserWithKey;
+    private constructor = empty;
+    method UserWithKey::user(&self) -> UserId; alias getUser;
+    method UserWithKey::public_key(&self) -> PublicKey; alias getPublicKey;
+});
+
+foreigner_class!(class GroupUserList {
+    self_type GroupUserList;
+    private constructor = empty;
+    method GroupUserList::list(&self) -> Vec<UserId>; alias getList;
+});
+
+///
+/// SDK Initialization Structure
+///
+
+foreigner_class!(
+/// Account's device context. Needed to initialize the Sdk with a set of device keys. See `Sdk.initialize()`
+class DeviceContext {
+    self_type DeviceContext;
+    constructor device_context::new(accountId: &UserId, segmentId: i64, devicePrivateKey: &PrivateKey, signingPrivateKey: &DeviceSigningKeyPair) -> DeviceContext;
+    constructor device_context::new_from_dar(dar: &DeviceAddResult) -> DeviceContext;
+    method device_context::account_id(&self) -> UserId; alias getAccountId;
+    method device_context::segment_id(&self) -> usize; alias getSegmentId;
+    method device_context::device_private_key(&self) -> PrivateKey; alias getDevicePrivateKey;
+    method device_context::signing_private_key(&self) -> DeviceSigningKeyPair; alias getSigningPrivateKey;
+    method device_context::to_json_string(&self) -> String; alias toJsonString;
+    static_method device_context::from_json_string(jsonString: &str) -> Result<DeviceContext, String>; alias fromJsonString;
+});
+
+foreigner_class!(
+/// Result from adding a new device
+class DeviceAddResult {
+    self_type DeviceAddResult;
+    private constructor = empty;
+    /// The user's given id, which uniquely identifies them inside the segment.
+    method device_add_result::account_id(&self) -> UserId; alias getAccountId;
+    /// The user's segment id
+    method device_add_result::segment_id(&self) -> usize; alias getSegmentId;
+    /// The private key which was generated for a particular device for the user. Not the user's master private key.
+    method device_add_result::device_private_key(&self) -> PrivateKey; alias getDevicePrivateKey;
+    /// The signing key which was generated for the device
+    method device_add_result::signing_private_key(&self) -> DeviceSigningKeyPair; alias getSigningPrivateKey;
+    /// The id of the device that was added
+    method device_add_result::device_id(&self) -> DeviceId; alias getDeviceId;
+    /// The name of the device that was added
+    method device_add_result::name(&self) -> Option<DeviceName>; alias getName;
+   });
+
+///
+/// User Operation Classes
+///
+
+foreigner_class!(
+/// Keypair for a newly created user.
+class UserCreateResult {
+    self_type UserCreateResult;
+    private constructor = empty;
+    method user_create_result::user_public_key(&self) -> PublicKey; alias getUserPublicKey;
+    /// True if the private key of the user's keypair needs to be rotated, else false.
+    method user_create_result::needs_rotation(&self) -> bool; alias getNeedsRotation;
+});
+
+foreigner_class!(
+/// IDs and public key for existing user on verify result
+class UserResult {
+    self_type UserResult;
+    private constructor = empty;
+    method user_result::account_id(&self) -> UserId; alias getAccountId;
+    method user_result::segment_id(&self) -> usize; alias getSegmentId;
+    method user_result::user_public_key(&self) -> PublicKey; alias getUserPublicKey;
+    method user_result::needs_rotation(&self) -> bool; alias getNeedsRotation;
+});
+
+foreigner_class!(
+/// Metadata about a user device.
+class UserDevice {
+    self_type UserDevice;
+    private constructor = empty;
+    /// Get the unique id for the device
+    method user_device::id(&self) -> DeviceId; alias getId;
+    /// Get the devices optional non-unique readable name
+    method user_device::name(&self) -> Option<DeviceName>; alias getName;
+    /// True if this device instance is the one that was used to make
+    /// the API request
+    method UserDevice::is_current_device(&self) -> bool; alias isCurrentDevice;
+});
+
+foreigner_class!(class DeviceCreateOpts {
+    self_type DeviceCreateOpts;
+    //Construct the DeviceCreateOpts with `null` for name.
+    constructor DeviceCreateOpts::default() -> DeviceCreateOpts;
+    constructor device_create_opts::create(name: Option<&DeviceName>) -> DeviceCreateOpts;
+});
+
+foreigner_class!(
+/// Options that can be specified creating a user.
+class UserCreateOpts {
+    self_type UserCreateOpts;
+    //Construct the UserCreateOpts with a needs_rotation of false.
+    constructor UserCreateOpts::default() -> UserCreateOpts;
+    constructor user_create_opts::create(needsRotation: bool) -> UserCreateOpts;
+});
+
+foreigner_class!(
+/// Devices for a user, sorted by the device id.
+class UserDeviceListResult {
+    self_type UserDeviceListResult;
+    private constructor = empty;
+    method user_device_list_result::result(&self) -> Vec<UserDevice>; alias getResult;
+});
+
+///
+/// Group Operation Classes
+///
+
+foreigner_class!(
+/// Abbreviated group meta information.
+class GroupMetaResult{
+    self_type GroupMetaResult;
+    private constructor = empty;
+    /// get the unique id of the group
+    method group_meta_result::id(&self) -> GroupId; alias getId;
+    /// null if the group has no name, else the group's name
+    method group_meta_result::name(&self) -> Option<GroupName>; alias getName;
+    /// true if the calling user is a group admin
+    method GroupMetaResult::is_admin(&self) -> bool; alias isAdmin;
+    /// true if the calling user is a group member
+    method GroupMetaResult::is_member(&self) -> bool; alias isMember;
+    /// get the date and time that the group was created
+    /// null if the calling user is not a group admin, else a NullableBoolean of if the group private key needs rotation
+    method group_meta_result::needs_rotation(&self) -> Option<NullableBoolean>; alias getNeedsRotation;
+});
+
+foreigner_class!(
+/// Group information from creation.
+class GroupCreateResult{
+    self_type GroupCreateResult;
+    private constructor = empty;
+    /// get the unique id of the group
+    method group_create_result::id(&self) -> GroupId; alias getId;
+    /// null if the group has no name, else the group's name
+    method group_create_result::name(&self) -> Option<GroupName>; alias getName;
+    /// public key for encrypting to the group
+    method group_create_result::group_master_public_key(&self) -> PublicKey; alias getGroupMasterPublicKey;
+    /// true if the calling user is a group admin
+    method GroupCreateResult::is_admin(&self) -> bool; alias isAdmin;
+    /// true if the calling user is a group member
+    method GroupCreateResult::is_member(&self) -> bool; alias isMember;
+    /// owner of the group
+    method group_create_result::owner(&self) -> UserId; alias getOwner;
+    /// a GroupUserList of group admins. Group admins can change group membership.
+    method group_create_result::admin_list(&self) -> GroupUserList; alias getAdminList;
+    /// a GroupUserList of group members. Members of a group can decrypt values encrypted to the group.
+    method group_create_result::member_list(&self) -> GroupUserList; alias getMemberList;
+    /// null if the calling user is not a group admin, else a NullableBoolean of if the group private key needs rotation
+    method group_create_result::needs_rotation(&self) -> Option<NullableBoolean>; alias getNeedsRotation;
+});
+
+foreigner_class!(class GroupListResult{
+    self_type GroupListResult;
+    private constructor = empty;
+    method group_list_result::result(&self) -> Vec<GroupMetaResult>; alias getResult;
+});
+
+foreigner_class!(class GroupGetResult{
+    self_type GroupGetResult;
+    private constructor = empty;
+    /// get the unique id of the group
+    method group_get_result::id(&self) -> GroupId; alias getId;
+    /// null if the group has no name, else the group's name
+    method group_get_result::name(&self) -> Option<GroupName>; alias getName;
+    /// get the public key of the group
+    method group_get_result::group_master_public_key(&self) -> PublicKey; alias getGroupMasterPublicKey;
+    /// true if the calling user is a group admin
+    method GroupGetResult::is_admin(&self) -> bool; alias isAdmin;
+    /// true if the calling user is a group member
+    method GroupGetResult::is_member(&self) -> bool; alias isMember;
+    /// null if the calling user is not in the group, else a GroupUserList of group admins
+    method group_get_result::admin_list(&self) -> Option<GroupUserList>; alias getAdminList;
+    /// null if the calling user is not in the group, else a GroupUserList of group members
+    method group_get_result::member_list(&self) -> Option<GroupUserList>; alias getMemberList;
+    /// null if the calling user is not a group admin, else a NullableBoolean of if the group private key needs rotation
+    method group_get_result::needs_rotation(&self) -> Option<NullableBoolean>; alias getNeedsRotation;
+});
+
+foreigner_class!(
+/// Result of rotating group private key.
+class GroupUpdatePrivateKeyResult{
+    self_type GroupUpdatePrivateKeyResult;
+    private constructor = empty;
+    /// true if the group still needs rotation, else false
+    method group_update_private_key_result::needs_rotation(&self) -> bool; alias getNeedsRotation;
+    /// the id of the group whose private key was rotated
+    method group_update_private_key_result::id(&self) -> GroupId; alias getId;
+});
+
+foreigner_class!(
+/// Options for group creation.
+class GroupCreateOpts {
+    self_type GroupCreateOpts;
+    constructor GroupCreateOpts::default() -> GroupCreateOpts;
+    /// @param id unique id of a group within a segment. If null, the server will assign an id.
+    /// @param name human readable name of the group. Does not need to be unique.
+    /// @param addAsAdmin if true (default), the creating user will be added as a group admin.
+    /// @param addAsMember if true (default), the creating user will be added to the group's membership.
+    /// @param owner if null (default), the creating user will be the owner of the group, else the specified user will be the owner and automatically added as an admin.
+    /// @param admins list of users to be added as admins of the group. This list takes priority over `addAsAdmin`, so the creating user will be added as an admin even if `addAsAdmin` is false.
+    /// @param members list of users to be added as members of the group. This list takes priority over `addAsMember`, so the creating user will be added as a member even if `addAsMember` is false.
+    /// @param needsRotation if true, the group will be marked as needing its private key rotated.
+    constructor group_create_opts::create(id: Option<&GroupId>, name: Option<&GroupName>, addAsAdmin: bool, addAsMember: bool, owner: Option<&UserId>, admins: Vec<UserId>, members: Vec<UserId>, needsRotation: bool) -> GroupCreateOpts;
+});
+
+foreigner_class!(
+/// A failure to edit a group's administrator or membership lists
+class GroupAccessEditErr{
+    self_type GroupAccessEditErr;
+    private constructor = empty;
+    /// Get user whose access was to be granted/revoked
+    method access_edit_failure::user(&self) -> UserId; alias getUser;
+    /// Get the reason for grant/revoke failure
+    method access_edit_failure::error(&self) -> String; alias getError;
+});
+
+foreigner_class!(
+/// Result from requesting changes to a group's membership or administrators. Partial success is supported.
+class GroupAccessEditResult{
+    self_type GroupAccessEditResult;
+    private constructor = empty;
+    /// Get the list of users whose access was modified
+    method group_access_edit_result::succeeded(&self) -> Vec<UserId>; alias getSucceeded;
+    /// Get the users whose access could not be modified
+    method group_access_edit_result::failed(&self) -> Vec<GroupAccessEditErr>; alias getFailed;
+});
+
+///
+/// Document Operation Classes
+///
+
+foreign_enum!(
+    /// Represents the reason a document can be viewed by the requesting user.
+    enum AssociationType {
+        /// User created the document
+        Owner = AssociationType::Owner,
+        /// User directly granted access to the document
+        FromUser = AssociationType::FromUser,
+        /// User granted access to the document via a group they are a member of
+        FromGroup = AssociationType::FromGroup,
+    }
+);
+
+foreigner_class!(
+class Category {
+    self_type Category;
+    private constructor = empty;
+    static_method category::validate(s: &str) -> Result<Category, String>;
+    method category::value(&self) -> String; alias getValue;
+});
+
+foreigner_class!(
+class Sensitivity {
+    self_type Sensitivity;
+    private constructor = empty;
+    static_method sensitivity::validate(s: &str) -> Result<Sensitivity, String>;
+    method sensitivity::value(&self) -> String; alias getValue;
+});
+
+foreigner_class!(
+class DataSubject {
+    self_type DataSubject;
+    private constructor = empty;
+    static_method data_subject::validate(s: &str) -> Result<DataSubject, String>;
+    method data_subject::value(&self) -> String; alias getValue;
+});
+
+foreigner_class!(
+class PolicyGrant {
+    self_type PolicyGrant;
+    constructor PolicyGrant::default() -> PolicyGrant;
+    constructor policy_grant::create(category:Option<&Category>,sensitivity:Option<&Sensitivity>,dataSubject:Option<&DataSubject>,substituteUser:Option<&UserId>) -> PolicyGrant;
+    method policy_grant::category(&self) -> Option<Category>; alias getCategory;
+    method policy_grant::sensitivity(&self) -> Option<Sensitivity>; alias getSensitivity;
+    method policy_grant::data_subject(&self) -> Option<DataSubject>; alias getDataSubject;
+    method policy_grant::substitute_id(&self) -> Option<UserId>; alias getSubstituteId;
+});
+
+foreigner_class!(
+/// Options for document creation.
+class DocumentEncryptOpts {
+    self_type DocumentEncryptOpts;
+    constructor DocumentEncryptOpts::default() -> DocumentEncryptOpts;
+    /// @param id            unique id of a document. If `null`, the server will assign an id
+    /// @param name          human readable name of the document. Does not need to be unique
+    /// @param grantToAuthor Flag determining whether to encrypt to the calling user or not. If set to false at least one value must be present in the `grant` lists.
+    /// @param userGrants    list of user ids that will be granted access to the document
+    /// @param groupGrants   list of group ids that will be granted access to the document
+    /// @param policyGrant   The policy labels which will be evaluated to determine grants.
+    constructor document_create_opt::create(id :Option<&DocumentId>, name :Option<&DocumentName>, grantToAuthor: bool, userGrants: Vec<UserId>, groupGrants: Vec<GroupId>, policyGrant:Option<&PolicyGrant>) -> DocumentEncryptOpts;
+});
+
+foreigner_class!(
+/// Single document's (abbreviated) metadata. Returned as part of a `DocumentListResult`.
+///
+/// @see DocumentMetadataResult for full metadata
+class DocumentListMeta{
+    self_type DocumentListMeta;
+    private constructor = empty;
+    method document_list_meta::id(&self) -> DocumentId; alias getId;
+    method document_list_meta::name(&self) -> Option<DocumentName>; alias getName;
+    method document_list_meta::association_type(&self) -> AssociationType; alias getAssociationType;
+    });
+
+foreigner_class!(
+/// Metadata for each of the documents that the current user has access to decrypt.
+class DocumentListResult{
+    self_type DocumentListResult;
+    private constructor = empty;
+    method document_list_result::result(&self) -> Vec<DocumentListMeta>; alias getResult;
+});
+
+foreigner_class!(
+/// Full metadata for a document.
+class DocumentMetadataResult{
+    self_type DocumentMetadataResult;
+    private constructor = empty;
+    method document_metadata_result::id(&self) -> DocumentId; alias getId;
+    method document_metadata_result::name(&self) -> Option<DocumentName>; alias getName;
+   method document_metadata_result::association_type(&self) -> AssociationType; alias getAssociationType;
+    method document_metadata_result::visible_to_users(&self) -> Vec<VisibleUser>; alias getVisibleToUsers;
+    method document_metadata_result::visible_to_groups(&self) -> Vec<VisibleGroup>; alias getVisibleToGroups;
+});
+
+foreigner_class!(
+/// Result for encrypt operations.
+class DocumentEncryptResult{
+    self_type DocumentEncryptResult;
+    private constructor = empty;
+    /// Unique (within the segment) id of the document
+    method document_encrypt_result::id(&self) -> DocumentId; alias getId;
+    /// Non-unique document name
+    method document_encrypt_result::name(&self) -> Option<DocumentName>; alias getName;
+    /// Bytes of encrypted document content
+    method document_encrypt_result::encrypted_data(&self) -> Vec<i8>; alias getEncryptedData;
+    /// Get the users and groups whose access was successfully changed
+    method DocumentAccessChange::changed(&self) -> SucceededResult; alias getChanged;
+    /// Get the users and groups whose access failed to be modified
+    method DocumentAccessChange::errors(&self) -> FailedResult; alias getErrors;
+});
+
+foreigner_class!(
+class DocumentEncryptUnmanagedResult {
+    self_type DocumentEncryptUnmanagedResult;
+    private constructor = empty;
+    /// Unique (within the segment) id of the document
+    method document_encrypt_unmanaged_result::id(&self) -> DocumentId; alias getId;
+    /// Bytes of encrypted document content
+    method document_encrypt_unmanaged_result::encrypted_data(&self) -> Vec<i8>; alias getEncryptedData;
+    /// Bytes of encrypted document encryption keys (EDEKs)
+    method document_encrypt_unmanaged_result::encrypted_deks(&self) -> Vec<i8>; alias getEncryptedDeks;
+    /// Get the users and groups whose access was successfully changed
+    method DocumentAccessChange::changed(&self) -> SucceededResult; alias getChanged;
+    /// Get the users and groups whose access failed to be modified
+    method DocumentAccessChange::errors(&self) -> FailedResult; alias getErrors;
+});
+
+foreigner_class!(
+/// Result of decrypting a document. Includes minimal metadata as well as the decrypted bytes.
+class DocumentDecryptResult{
+    self_type DocumentDecryptResult;
+    private constructor = empty;
+    method document_decrypt_result::id(&self) -> DocumentId; alias getId;
+    method document_decrypt_result::name(&self) -> Option<DocumentName>; alias getName;
+    method document_decrypt_result::decrypted_data(&self) -> Vec<i8>; alias getDecryptedData;
+    });
+
+foreigner_class!(
+/// Result of decrypting an unmanaged document. Includes the id and the decrypted bytes.
+class DocumentDecryptUnmanagedResult{
+    self_type DocumentDecryptUnmanagedResult;
+    private constructor = empty;
+    /// Unique (within the segment) id of the document
+    method document_decrypt_unmanaged_result::id(&self) -> DocumentId; alias getId;
+    /// Get the bytes of the decrypted document
+    method document_decrypt_unmanaged_result::decrypted_data(&self) -> Vec<i8>; alias getDecryptedData;
+    /// User/Group that granted access to the encrypted data. More specifically,
+    /// this is the user/group associated with the edek that was chosen and transformed by the webservice.
+    method document_decrypt_unmanaged_result::access_via(&self) -> UserOrGroupId; alias getAccessViaUserOrGroup;
+});
+
+foreigner_class!(
+// A successful edit of the access list of a document.
+class SucceededResult {
+    self_type SucceededResult;
+    private constructor = empty;
+    /// Get list of users whose access was granted/revoked
+    method document_access_change_result::SucceededResult::users(&self) -> Vec<UserId>; alias getUsers;
+    /// Get list of groups whose access was granted/revoked
+    method document_access_change_result::SucceededResult::groups(&self) -> Vec<GroupId>; alias getGroups;
+});
+
+foreigner_class!(
+/// A failure to edit the access list of a document.
+class FailedResult {
+    self_type FailedResult;
+    private constructor = empty;
+    /// Get list of users whose access was to be granted/revoked
+    method document_access_change_result::FailedResult::users(&self) -> Vec<UserAccessErr>; alias getUsers;
+    /// Get list of groups whose access was to be granted/revoked
+    method document_access_change_result::FailedResult::groups(&self) -> Vec<GroupAccessErr>; alias getGroups;
+    /// Utility method to check if the list of failures is empty
+    method document_access_change_result::FailedResult::is_empty(&self) -> bool; alias isEmpty;
+});
+
+foreigner_class!(
+/// Result of granting or revoking access to a document. Both grant and revoke support partial
+/// success.
+class DocumentAccessResult {
+    self_type DocumentAccessResult;
+    private constructor = empty;
+    /// Get the users and groups whose access was successfully changed
+    method DocumentAccessChange::changed(&self) -> SucceededResult; alias getChanged;
+    /// Get the users and groups whose access failed to be modified
+    method DocumentAccessChange::errors(&self) -> FailedResult; alias getErrors;
+});
+
+foreigner_class!(
+/// Policy evaluation caching config
+///
+/// Since policies are evaluated by the webservice, caching the result can greatly speed
+/// up encrypting a document with a PolicyGrant.
+class PolicyCachingConfig{
+    self_type PolicyCachingConfig;
+    /// @param maxEntries  maximum number of policy evaluations that will be cached by the SDK.
+    ///                    If the maximum number is exceeded, the cache will be cleared prior to storing the next entry.
+    constructor policy_caching_config::create(maxEntries: usize) -> PolicyCachingConfig;
+    constructor PolicyCachingConfig::default() -> PolicyCachingConfig;
+    method policy_caching_config::get_max_entries(&self) -> usize; alias getMaxEntries;
+});
+
+foreigner_class!(
+/// Top-level configuration object for IronOxide
+class IronOxideConfig{
+    self_type IronOxideConfig;
+    constructor IronOxideConfig::default() -> IronOxideConfig;
+    /// @param policyCaching        policy caching configuration for IronOxide
+    /// @param sdkOperationTimeout  timeout for all SDK methods
+    constructor ironoxide_config::create(policyCaching: &PolicyCachingConfig, sdkOperationTimeout: Option<&Duration>) -> IronOxideConfig;
+    method ironoxide_config::get_policy_caching(&self) -> PolicyCachingConfig; alias getPolicyCachingConfig;
+    method ironoxide_config::get_timeout(&self) -> Option<Duration>; alias getSdkOperationTimeout;
+});
+
+foreigner_class!(
+class Duration{
+    self_type Duration;
+    private constructor = empty;
+    static_method Duration::from_millis(millis: u64) -> Duration; alias fromMillis;
+    static_method Duration::from_secs(secs: u64) -> Duration; alias fromSecs;
+    method duration::get_millis(&self) -> u64; alias getMillis;
+    method duration::get_secs(&self) -> u64; alias getSecs;
+});
+
+foreign_class!(
+class EncryptedBlindIndexSalt {
+    self_type EncryptedBlindIndexSalt;
+    constructor encrypted_blind_index_salt::create(encrypted_deks: &[i8], encrypted_salt_bytes: &[i8]) -> EncryptedBlindIndexSalt;
+    method encrypted_blind_index_salt::encrypted_deks(&self) -> Vec<i8>; alias getEncryptedDeks;
+    method encrypted_blind_index_salt::encrypted_salt_bytes(&self) -> Vec<i8>; alias getEncryptedSaltBytes;
+    method encrypted_blind_index_salt::initialize_search(&self, ironoxide: &IronOxide) -> Result<BlindIndexSearch, String>; alias initializeSearch;
+});
+
+foreign_class!(
+class BlindIndexSearch {
+    self_type BlindIndexSearch;
+    private constructor = empty;
+    /// Generate the list of tokens to use to find entries that match the search query, given the specified partitionId.
+    ///
+    /// @param query        the string you want to tokenize and hash
+    /// @param partitionId  an extra string to include in every hash, allowing 2 queries with different partitionIds to produce a different set of tokens for the same query
+    method blind_index_search::tokenize_query(&self, query: &str, partitionId: Option<&str>) -> Result<Vec<i32>, String>; alias tokenizeQuery;
+    /// Generate the list of tokens to use to find entries that match the search query, given the specified partitionId.
+    ///
+    /// @param query        the string you want to tokenize and hash
+    /// @param partitionId  an extra string to include in every hash, allowing 2 queries with different partitionIds to produce a different set of tokens for the same query
+    method blind_index_search::tokenize_data(&self, query: &str, partitionId: Option<&str>) -> Result<Vec<i32>, String>; alias tokenizeData;
+});
+
+///
+/// Full SDK Class Structure
+///
+
+foreigner_class!(
+/// Struct that is used to make authenticated requests to the IronCore API. Instantiated with the details
+/// of an accounts various ids, device, and signing keys. Once instantiated all operations will be
+/// performed in the context of the account provided.
+class IronOxide {
+    self_type IronOxide;
+    private constructor = empty;
+    /// Clears all entries from the policy cache
+    ///
+    /// @return number of entries cleared from the cache
+    method IronOxide::clear_policy_cache(&self) -> usize; alias clearPolicyCache;
+    /// Verify a user given a JWT for their user record.
+    ///
+    /// @param jwt      valid IronCore JWT
+    /// @param timeout  timeout for this operation or `null` for no timeout
+    /// @return option of whether the user's account record exists in the IronCore system or not. Error if the request couldn't be made.
+    static_method user_verify(jwt:&str, timeout: Option<&Duration>) -> Result<Option<UserResult>, String>; alias userVerify;
+    /// Create a new user within the IronCore system.
+    ///
+    /// @param jwt       valid IronCore or Auth0 JWT
+    /// @param password  password used to encrypt and escrow the user's private master key
+    /// @param options   see {@link UserCreateOpts}. Use `new UserCreateOpts()` for defaults
+    /// @param timeout   timeout for this operation or `null` for no timeout
+    /// @return see {@link UserCreateResult}. For most use cases, the public key can be discarded as IronCore escrows your user's keys.
+    ///         The escrowed keys are unlocked by the provided password.
+    static_method user_create(jwt:&str, password:&str, options:&UserCreateOpts, timeout: Option<&Duration>) -> Result<UserCreateResult, String>; alias userCreate;
+    /// Initialize IronOxide with a device. Verifies that the provided user/segment exists and the provided device
+    /// keys are valid and exist for the provided account.
+    ///
+    /// @param init    device context used to initialize the IronOxide with a set of device keys
+    /// @param config  configuration for policy caching and SDK operation timeouts
+    /// @throws java.lang.Exception if the provided `DeviceContext` is invalid
+    /// @return an instance of the IronOxide
+    static_method initialize(init:&DeviceContext, config: &IronOxideConfig) -> Result<IronOxide, String>;
+    /// Initialize IronOxide with a device. Verifies that the provided user/segment exists and the provided device
+    /// keys are valid and exist for the provided account.
+    /// After initialization, checks whether the calling user's private key needs rotation and rotates it
+    /// if necessary, then does the same for each group the user is an admin of.
+    ///
+    /// @param init      device context used to initialize the IronOxide with a set of device keys
+    /// @param password  password used to encrypt and escrow the user's private master key
+    /// @param config    configuration for policy caching and SDK operation timeouts
+    /// @param timeout   timeout used only for the potential call to rotate_all. This is a separate timeout
+    ///                  from the SDK-wide timeout as it is expected that this operation might take significantly
+    ///                  longer than other operations. If `null`, defaults to the SDK operation timeout in `config`.
+    /// @return an instance of the IronOxide
+    static_method initialize_and_rotate(init: &DeviceContext, password: &str, config: &IronOxideConfig, timeout: Option<&Duration>) -> Result<IronOxide, String>; alias initializeAndRotate;
+    /// Generates a new device for the user specified in the signed JWT.
+    ///
+    /// This will result in a new transform key (from the user's master private key to the new device's public key)
+    /// being generated and stored with the IronCore Service.
+    ///
+    /// @param jwt                  valid IronCore JWT
+    /// @param password             password used to encrypt and escrow the user's private key
+    /// @param deviceCreateOptions  optional values, like device name
+    /// @param timeout              timeout for this operation or `null` for no timeout
+    /// @return details about the newly created device
+    static_method generate_new_device(jwt:&str, password:&str, deviceCreateOptions: &DeviceCreateOpts, timeout: Option<&Duration>) -> Result<DeviceAddResult, String>; alias generateNewDevice;
+    /// Get all the devices for the current user
+    ///
+    /// @return all devices for the current user, sorted by the device id
+    method user_list_devices(&self) -> Result<UserDeviceListResult, String>; alias userListDevices;
+    /// Get a list of user public keys given their IDs. Allows discovery of which user IDs have keys in the
+    /// IronCore system to determine of they can be added to groups or have documents shared with them.
+    ///
+    /// @param users list of user IDs to check
+    /// @return map from user ID to users public key. Only users who have public keys will be returned in the map
+    method user_get_public_key(&self, users: Vec<UserId>) -> Result<Vec<UserWithKey>, String>; alias userGetPublicKey;
+    /// Delete a user device.
+    ///
+    /// If deleting the currently signed in device (`null` for `deviceId`), the sdk will need to be
+    /// reinitialized with `IronOxide.initialize()` before further use.
+    ///
+    /// @param deviceId id of the device to delete. If `null`, delete the currently signed in device {@link #userListDevices()} to get ids
+    /// @return id of deleted device
+    method user_delete_device(&self, deviceId: Option<&DeviceId>) -> Result<DeviceId, String>; alias userDeleteDevice;
+    /// Rotate the current user's private key, but leave the public key the same.
+    /// There's no black magic here! This is accomplished via multi-party computation with the
+    /// IronCore webservice.
+    ///
+    /// @param password password to unlock the current user's master private key
+    /// @return The (encrypted) updated private key and associated metadata
+    method user_rotate_private_key(&self, password: &str) -> Result<UserUpdatePrivateKeyResult, String>; alias userRotatePrivateKey;
+    /// List all of the documents that the current user is able to decrypt.
+    ///
+    /// @return {@link DocumentListResult} struct with vec of metadata about each document the user can decrypt.
+    method document_list(&self) -> Result<DocumentListResult, String>; alias documentList;
+    /// Get the metadata for a specific document given its id.
+    ///
+    /// @param id unique id of the document to retrieve
+    /// @return {@link DocumentMetadataResult} with details about the requested document.
+    method document_get_metadata(&self, id :&DocumentId) -> Result<DocumentMetadataResult, String>; alias documentGetMetadata;
+    /// Attempt to parse the document id out of an encrypted document.
+    ///
+    /// @param encryptedDocument encrypted document bytes
+    /// @throws java.lang.Exception if provided encrypted document has no header
+    /// @return extracted id
+    method document_get_id_from_bytes(&self, encryptedDocument:&[i8]) -> Result<DocumentId, String>; alias documentGetIdFromBytes;
+    /// Encrypt the provided document bytes.
+    ///
+    /// @param documentData  bytes of the document to encrypt
+    /// @param encryptOpts   optional document encrypt parameters
+    method document_encrypt(&self, documentData: &[i8], encryptOpts: &DocumentEncryptOpts) -> Result<DocumentEncryptResult, String>; alias documentEncrypt;
+    /// Update the encrypted content of an existing document. Persists any existing access to other users and groups.
+    ///
+    /// @param id               id of document to update
+    /// @param newDocumentData  updated document content to encrypt
+    method document_update_bytes(&self, id: &DocumentId, newDocumentData: &[i8]) -> Result<DocumentEncryptResult, String>; alias documentUpdateBytes;
+    /// Decrypts the provided encrypted document and returns details about the document as well as its decrypted bytes.
+    ///
+    /// @param encryptedDocument bytes of encrypted document. Should be the same bytes returned from {@link #documentEncrypt(byte[], DocumentEncryptOpts)}
+    /// @return {@link DocumentDecryptResult} includes metadata about the provided document as well as the decrypted document bytes
+    method document_decrypt(&self, encryptedDocument: &[i8]) -> Result<DocumentDecryptResult, String>; alias documentDecrypt;
+    /// Update a document name to a new value or clear its value.
+    ///
+    /// @param id    id of the document to update
+    /// @param name  new name for the document. Provide a {@link DocumentName} to update to a new name or `null` to clear the name field
+    /// @return metadata about the document that was updated.
+    method document_update_name(&self, id: &DocumentId, name: Option<&DocumentName>) -> Result<DocumentMetadataResult, String>; alias documentUpdateName;
+    /// Grant access to a document. Recipients of document access can be either users or groups.
+    ///
+    /// @param documentId   id of the document whose access is is being modified
+    /// @param userGrants   list of user grants
+    /// @param groupGrants  list of group grants
+    /// @throws java.lang.Exception the request failed either on the client or the server rejected the whole request
+    /// @return each individual grant to a user/group succeeded or failed
+    method document_grant_access(&self, documentId: &DocumentId, userGrants: Vec<UserId>, groupGrants: Vec<GroupId>)
+        -> Result<DocumentAccessResult, String>; alias documentGrantAccess;
+    /// Revoke access from a document. Revocation of document access can be either users or groups.
+    ///
+    /// @param documentId    id of the document whose access is is being modified
+    /// @param userRevokes   list of user revokes
+    /// @param groupRevokes  list of group revokes
+    /// @throws java.lang.Exception the request failed either on the client or the server rejected the whole request
+    /// @return each individual revoke from a user/group either succeeded or failed
+    method document_revoke_access(&self, documentId: &DocumentId, userRevokes: Vec<UserId>, groupRevokes: Vec<GroupId>)
+        -> Result<DocumentAccessResult, String>; alias documentRevokeAccess;
+    /// List all of the groups that the current user is either an admin or member of.
+    ///
+    /// @return list of (abbreviated) metadata about each group the user is a part of
+    method group_list(&self) -> Result<GroupListResult, String>; alias groupList;
+    /// Get the full metadata for a specific group given its ID.
+    ///
+    /// @param id unique id of the group to retrieve
+    /// @return details about the requested group
+    method group_get_metadata(&self, id:&GroupId) -> Result<GroupGetResult, String>; alias groupGetMetadata;
+    /// Create a group. The creating user will become a group admin.
+    ///
+    /// @param groupCreateOpts see {@link GroupCreateOpts}. Use `new GroupCreateOpts()` for defaults
+    method group_create(&self, groupCreateOpts: &GroupCreateOpts) -> Result<GroupCreateResult, String>; alias groupCreate;
+    /// Update a group name to a new value or clear its value.
+    ///
+    /// @param id    id of the group to update
+    /// @param name  new name for the group. Provide a {@link GroupName} to update to a new name or `null` to clear the name field
+    /// @return metadata about the group that was updated
+    method group_update_name(&self, id: &GroupId, name: Option<&GroupName>) -> Result<GroupMetaResult, String>; alias groupUpdateName;
+    /// Delete the identified group.
+    ///
+    /// @param id unique id of group
+    /// @throws java.lang.Exception if it wasn't able to delete the group
+    /// @return the deleted group id
+    method group_delete(&self, id: &GroupId) -> Result<GroupId, String>; alias groupDelete;
+    /// Add the users as members of a group.
+    ///
+    /// @param id     id of the group to add members to
+    /// @param users  the list of users thet will be added to the group as members
+    /// @return all the users that were added and all the users that were not added with the reason they were not
+    method group_add_members(&self, id:&GroupId, users:Vec<UserId>) -> Result<GroupAccessEditResult, String>; alias groupAddMembers;
+    /// Remove a list of users as members from the group.
+    ///
+    /// @param id           id of the group to remove members from
+    /// @param userRevokes  list of user ids to remove as members
+    /// @return list of users that were removed and the users that failed to be removed with the reason they were not
+    method group_remove_members(&self, id:&GroupId, userRevokes: Vec<UserId>) -> Result<GroupAccessEditResult, String>; alias groupRemoveMembers;
+    /// Add the users as admins of a group.
+    ///
+    /// @param id     id of the group to add admins to
+    /// @param users  the list of users that will be added to the group as admins
+    /// @return all the users that were added and the users that were not added with the reason they were not
+    method group_add_admins(&self, id: &GroupId, users: Vec<UserId>) -> Result<GroupAccessEditResult, String>; alias groupAddAdmins;
+    /// Remove a list of users as admins from the group.
+    ///
+    /// @param id           id of the group
+    /// @param userRevokes  list of user ids to remove as admins
+    /// @return list of users that were removed and the users that failed to be removed with the reason they were not
+    method group_remove_admins(&self, id:&GroupId, userRevokes: Vec<UserId>) -> Result<GroupAccessEditResult, String>; alias groupRemoveAdmins;
+    /// Rotate the provided group's private key, but leave the public key the same.
+    /// There's no black magic here! This is accomplished via multi-party computation with the
+    /// IronCore webservice.
+    /// Note: You must be an admin of the group in order to rotate its private key.
+    ///
+    /// @param id id of the group you wish to rotate the private key of
+    /// @return The id of the group whose private key got updated and associated metadata
+    method group_rotate_private_key(&self, id:&GroupId) -> Result<GroupUpdatePrivateKeyResult, String>; alias groupRotatePrivateKey;
+    /// Encrypt the provided document bytes. Return the encrypted document encryption keys (EDEKs) instead of creating a document entry in the IronCore webservice.
+    ///
+    /// @param documentData  bytes of the document to encrypt
+    /// @param encryptOpts   optional document encrypt parameters
+    method advanced_document_encrypt_unmanaged(&self, documentData: &[i8], encryptOpts: &DocumentEncryptOpts) -> Result<DocumentEncryptUnmanagedResult, String>; alias advancedDocumentEncryptUnmanaged;
+    /// Decrypt the provided encrypted document with the encrypted document encryption keys (EDEKs).
+    ///
+    /// @param encryptedData  bytes of encrypted document. Should be the same bytes returned from {@link #advancedDocumentEncryptUnmanaged(byte[], DocumentEncryptOpts)}
+    /// @param encryptedDeks  encrypted document encryption keys. Should be the same edeks returned from {@link #advancedDocumentEncryptUnmanaged(byte[], DocumentEncryptOpts)}
+    /// @return {@link DocumentDecryptResult} includes the id of the provided document as well as the decrypted document bytes
+    method advanced_document_decrypt_unmanaged(&self, encryptedData: &[i8], encryptedDeks: &[i8]) -> Result<DocumentDecryptUnmanagedResult, String>; alias advancedDocumentDecryptUnmanaged;
+    /// Create an index and encrypt it to the provided groupId.
+    ///
+    /// @param groupId group to encrypt to
+    method create_blind_index(&self, groupId: &GroupId) -> Result<EncryptedBlindIndexSalt, String>; alias createBlindIndex;
 });

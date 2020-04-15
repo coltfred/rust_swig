@@ -12,7 +12,8 @@ fn main() {
     )
     .cpp_optional(CppOptional::Boost)
     .cpp_variant(CppVariant::Boost)
-    .cpp_str_view(CppStrView::Boost);
+    .cpp_str_view(CppStrView::Boost)
+    .separate_impl_headers(true);
     //ANCHOR_END: cpp_config
     let swig_gen = rust_swig::Generator::new(LanguageConfig::CppConfig(cpp_cfg));
     swig_gen.expand(

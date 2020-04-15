@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 # ANCHOR_END: cargo_lib_section
 
 [dependencies]
+ironoxide = "0.21.0"
 
 # ANCHOR: cargo_build_deps
 [build-dependencies]
